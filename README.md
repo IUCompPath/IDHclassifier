@@ -1,4 +1,7 @@
+# The Code is currently in development stage.
+
 # Interpretable artificial intelligence-based determination of glioma IDH mutation status directly from histology slides
+
 
 
 ## Environment
@@ -123,5 +126,26 @@ DSMIL
 
 
 ## Citations
+
+Shubham Innani, W Robert Bell, Hannah Harmsen, MacLean P Nasrallah, Bhakti Baheti, Spyridon Bakas, Interpretable artificial intelligence based determination of glioma IDH mutation status directly from histology slides, Neuro-Oncology Advances, Volume 7, Issue 1, January-December 2025, vdaf140, https://doi.org/10.1093/noajnl/vdaf140
+
+```bash
+
+@article{10.1093/noajnl/vdaf140,
+    author = {Innani, Shubham and Bell, W Robert and Harmsen, Hannah and Nasrallah, MacLean P and Baheti, Bhakti and Bakas, Spyridon},
+    title = {Interpretable artificial intelligence based determination of glioma IDH mutation status directly from histology slides},
+    journal = {Neuro-Oncology Advances},
+    volume = {7},
+    number = {1},
+    pages = {vdaf140},
+    year = {2025},
+    month = {07},
+    issn = {2632-2498},
+    doi = {10.1093/noajnl/vdaf140},
+    url = {https://doi.org/10.1093/noajnl/vdaf140},
+    eprint = {https://academic.oup.com/noa/article-pdf/7/1/vdaf140/63738190/vdaf140.pdf},
+}
+```
+
 
 
