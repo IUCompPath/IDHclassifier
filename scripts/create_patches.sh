@@ -38,3 +38,12 @@ python step_1_patching.py \
     --seg \
     --patch \
     --stitch
+
+
+# STEP 2: Coordinate Cleanup (Filtering white/dark/junk)
+echo "Running Cleanup Step..."
+python step_2_cleanup.py \
+    --wsi_dir "$DATA_DIR" \
+    --h5_dir "$COORD_DIR/patches" \
+    --csv_path "$COORD_DIR/process_list_autogen.csv" \
+    --patching "$MAG"

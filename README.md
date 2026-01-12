@@ -87,9 +87,15 @@ The **patches** folder contains arrays of extracted tissue patches from each sli
 The **stitches** folder contains downsampled visualizations of stitched tissue patches (one image per slide) (Optional, not used for downstream tasks)
 The auto-generated csv file **process_list_autogen.csv** contains a list of all slides processed, along with their segmentation/patching parameters used.
 
-## Creating Patches
-scripts
-curations
+### 🧹 Patch Cleanup (Step 2)
+After initial patching, the pipeline runs a **Cleanup Script** to filter out low-quality tiles.
+#### Filtering Criteria:
+1. **White Space**: Patches with >85% background are removed.
+2. **Stain Detection**: Uses HED (Hematoxylin-Eosin-DAB) color deconvolution to ensure tissue is actually present.
+3. **HSV Filtering**: Removes blurry or out-of-focus areas based on saturation and value thresholds.
+
+#### Why this is necessary:
+Whole Slide Images often contain artifacts, marker ink, or large empty regions. By cleaning the `.h5` files, you reduce the noise in your training set and significantly speed up the feature extraction (encoding) step.
 
 ## Creating Features
 Imagenet
