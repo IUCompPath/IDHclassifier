@@ -149,7 +149,7 @@ Example:
 ./train.sh 20x uni
 ```
 ### Methodology
-This codebase is heavily based on CLAM(https://github.com/mahmoodlab/CLAM/). However, unlike CLAM, instance-level clustering is not used.
+This codebase is heavily based on [CLAM](https://github.com/mahmoodlab/CLAM/). However, unlike CLAM, instance-level clustering is not used.
 The model is trained using a pure Attention-based Multiple Instance Learning (MIL) framework.
 
 ## Evaluation 
