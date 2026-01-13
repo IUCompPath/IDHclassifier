@@ -112,13 +112,31 @@ After initial patching, the pipeline runs a **Cleanup Script** to filter out low
 Whole Slide Images often contain artifacts, marker ink, or large empty regions. By cleaning the `.h5` files, you reduce the noise in your training set and significantly speed up the feature extraction (encoding) step.
 
 ## Creating Features
-Imagenet
-SimCLR
-HIPT4k
-LunitViT
-CTranspath
-UNI
-RetCCL
+Run the extraction script by specifying magnification, batch size, and the desired model backbone. The script dynamically maps to the correct data and coordinate directories based on the magnification provided.
+
+### Usage
+```shell
+./extract_features.sh <MAG> <BATCH_SIZE> <BACKBONE>
+```
+Example: 
+```shell
+./extract_features.sh 20x 256 retccl
+```
+
+### Supported Backbones
+
+We support several **state-of-the-art self-supervised and supervised models** for histopathology.  
+For more details about each model, please refer to the original repositories to request access and follow their specific licensing terms.
+
+- **UNI** : [https://github.com/mahmoodlab/UNI](https://github.com/mahmoodlab/UNI)
+- **CTransPath** : [https://github.com/Xiyue-Wang/TransPath](https://github.com/Xiyue-Wang/TransPath)
+- **RetCCL** : [https://github.com/Xiyue-Wang/RetCCL](https://github.com/Xiyue-Wang/RetCCL)
+- **HIPT-4K** : [https://github.com/mahmoodlab/HIPT](https://github.com/mahmoodlab/HIPT)
+- **Lunit ViT** : [https://github.com/lunit-io/benchmark-ssl-pathology](https://github.com/lunit-io/benchmark-ssl-pathology)
+- **SimCLR** : [https://github.com/ozanciga/self-supervised-histopathology](https://github.com/ozanciga/self-supervised-histopathology)
+- **ResNet-50** : ImageNet pretrained
+
+
 
 ## Training the models
 Attention MIL
