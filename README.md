@@ -17,12 +17,12 @@ sudo apt-get install openslide-tools
 
 Next, use the environment configuration file located in docs/clam.yaml to create a conda environment:
 ```bash
-conda env create -n clam -f docs/idh_classifier.yaml
+conda env create -n idh_classifier -f docs/idh_classifier.yaml
 ```
 
 Activate the environment:
 ```bash
-conda activate clam
+conda activate idh_classifier
 ```
 
 Once inside the created environment, to install smooth-topk (first cd to a location that is outside the project folder and is suitable for cloning new git repositories):
