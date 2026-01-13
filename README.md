@@ -2,6 +2,9 @@
 
 # Interpretable artificial intelligence-based determination of glioma IDH mutation status directly from histology slides
 
+<img src="fig1a.tif" width="1000px" align="center" />
+
+Isocitrate dehydrogenase (IDH) mutation status is a diagnostic requirement for glioma with associated prognostic and therapeutic implications. Clinical routine visual assessment of tissue is insufficient to determine IDH status conclusively, mandating molecular workup that is unavailable everywhere. We developed an interpretable Artificial Intelligence (AI)-based approach for determining IDH status directly from H&E-stained glioma slides.
 
 
 ## Environment
@@ -166,11 +169,9 @@ Example:
 ./eval.sh 20x uni
 ```
 
-## Hovernet
-
-## Acknowledgement
-
 ## References
+1. Lu, M.Y., Williamson, D.F.K., Chen, T.Y. et al. Data-efficient and weakly supervised computational pathology on whole-slide images. Nat Biomed Eng 5, 555–570 (2021). https://doi.org/10.1038/s41551-020-00682-w
+2. 
 
 ## Citations
 
