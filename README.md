@@ -1,5 +1,3 @@
-# The Code is currently in development stage.
-
 # Interpretable artificial intelligence-based determination of glioma IDH mutation status directly from histology slides
 
 <img src="fig1a.jpg" width="1000px" align="center" />
@@ -170,8 +168,13 @@ Example:
 ```
 
 ## References
-1. Lu, M.Y., Williamson, D.F.K., Chen, T.Y. et al. Data-efficient and weakly supervised computational pathology on whole-slide images. Nat Biomed Eng 5, 555–570 (2021). https://doi.org/10.1038/s41551-020-00682-w
-2. 
+1. Lu, Ming Y., et al. "Data-efficient and weakly supervised computational pathology on whole-slide images." Nature biomedical engineering 5.6 (2021): 555-570.
+2. Wang, Xiyue, et al. "RetCCL: Clustering-guided contrastive learning for whole-slide image retrieval." Medical image analysis 83 (2023): 102645.
+3. Kang, Mingu, et al. "Benchmarking self-supervised learning on diverse pathology datasets." Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition. 2023.
+4. Chen, Richard J., et al. "Towards a general-purpose foundation model for computational pathology." Nature medicine 30.3 (2024): 850-862.
+5. Wang, Xiyue, et al. "Transformer-based unsupervised contrastive learning for histopathological image classification." Medical image analysis 81 (2022): 102559.
+6. Srinidhi, Chetan L., and Anne L. Martel. "Improving self-supervised learning with hardness-aware dynamic curriculum learning: an application to digital pathology." Proceedings of the IEEE/CVF International Conference on Computer Vision. 2021.
+7. Chen, Richard J., et al. "Scaling vision transformers to gigapixel images via hierarchical self-supervised learning." Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. 2022.
 
 ## Citations
 
