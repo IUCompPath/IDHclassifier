@@ -68,27 +68,38 @@ This ensures that the physical area covered by a patch remains consistent or fol
 ```
 By setting `20x` to `256` and `40x` to `512`, you are effectively keeping the **field of view (FOV)** of each patch identical in terms of physical microns (assuming the 40x scan has twice the resolution of the 20x scan). This is a standard best practice in pathology machine learning to ensure the model sees the same amount of tissue per tile regardless of the scanner settings.
 
+#### Output Directory Structure
 ```bash
-RESULTS_DIRECTORY/
+data/slides_patches_20x/
 	├── masks
-    		├── slide_1.png
-    		├── slide_2.png
+    		├── patient_1_slide_a.png
+    		├── patient_1_slide_b.png
     		└── ...
 	├── patches
-    		├── slide_1.h5
-    		├── slide_2.h5
+    		├── patient_1_slide_a.h5
+    		├── patient_1_slide_b.h5
     		└── ...
 	├── stitches
-    		├── slide_1.png
-    		├── slide_2.png
+    		├── patient_1_slide_a.png
+    		├── patient_1_slide_b.png
     		└── ...
-	└── process_list_autogen.csv
+	└── slides_processed.csv
+
+data/slides_patches_40x/
+├── masks
+        ├── patient_1_slide_a.png
+        ├── patient_1_slide_b.png
+        └── ...
+├── patches
+        ├── patient_1_slide_a.h5
+        ├── patient_1_slide_b.h5
+        └── ...
+├── stitches
+        ├── patient_1_slide_a.png
+        ├── patient_1_slide_b.png
+        └── ...
+└── slides_processed.csv
 ```
-
-
-The **patches** folder contains arrays of extracted tissue patches from each slide (one .h5 file per slide, where each entry corresponds to the coordinates of the top-left corner of a patch)
-The **stitches** folder contains downsampled visualizations of stitched tissue patches (one image per slide) (Optional, not used for downstream tasks)
-The auto-generated csv file **process_list_autogen.csv** contains a list of all slides processed, along with their segmentation/patching parameters used.
 
 ### 🧹 Patch Cleanup (Step 2)
 After initial patching, the pipeline runs a **Cleanup Script** to filter out low-quality tiles.
@@ -124,6 +135,7 @@ DSMIL
 
 ## Acknowledgement
 
+## References
 
 ## Citations
 
@@ -146,6 +158,4 @@ Shubham Innani, W Robert Bell, Hannah Harmsen, MacLean P Nasrallah, Bhakti Bahet
     eprint = {https://academic.oup.com/noa/article-pdf/7/1/vdaf140/63738190/vdaf140.pdf},
 }
 ```
-
-
 
