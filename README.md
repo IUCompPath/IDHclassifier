@@ -119,7 +119,7 @@ Run the extraction script by specifying magnification, batch size, and the desir
 ```
 Example: 
 ```shell
-./extract_features.sh 20x 256 retccl
+./extract_features.sh 20x 256 uni
 ```
 
 ### Supported Backbones
@@ -136,11 +136,21 @@ For more details about each model, please refer to the original repositories to 
 - **ResNet-50** : ImageNet pretrained
 
 ## Training the models
-Attention MIL
-Mean MIL
-MaxMIL
-TransMIL
-DSMIL
+
+### Usage Instructions
+To run the training script, pass the **magnification level** and **backbone name** as arguments:
+```bash
+chmod +x train.sh
+./train.sh <MAG> <BACKBONE>
+```
+
+Example: 
+```bash
+./train.sh 20x uni
+```
+### Methodology
+This codebase is heavily based on CLAM(https://github.com/mahmoodlab/CLAM/). However, unlike CLAM, instance-level clustering is not used.
+The model is trained using a pure Attention-based Multiple Instance Learning (MIL) framework.
 
 ## Evaluation 
 
