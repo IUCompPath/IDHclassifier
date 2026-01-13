@@ -1,16 +1,48 @@
-cd /home/shubham/ssl/CLAM_lunit/
-for j in train val test
-    do 
-        python eval_miccai.py --k 10 --models_exp_code tcga_2021_$1_s1 --save_exp_code tcga_2021_$1_"$j" --task $2 --model_type clam_sb --results_dir results --data_root_dir /home/shubham/ssl/CLAM_lunit/ --split "$j" --features_dir features/features_$3_256 --csv_path dataset_csv/$4.csv
-done
- 
- 
-for j in 2.5x 5x 10x 20x; do  python eval_miccai.py --k 10 --models_exp_code tcga_2021_grade_"$j"_s1 --save_exp_code tcga_2021_grade_"$j"_test --task tcga_3_class --model_type clam_sb --results_dir results --data_root_dir /home/shubham/ssl/CLAM_lunit/ --split test --features_dir features_ebrains/features_"$j"_256 --csv_path dataset_csv/ebrain_df_label_grade.csv --splits_dir splits/ebrain_who_2021_100; done
- 
- 
-for j in 2.5x 5x 10x 20x; do  python eval_miccai.py --k 10 --models_exp_code tcga_2021_who_"$j"_s1 --save_exp_code tcga_2021_who_"$j"_test --task tcga_who_2021 --model_type clam_sb --results_dir results --data_root_dir /home/shubham/ssl/CLAM_lunit/ --split test --features_dir features_ebrains/features_"$j"_256 --csv_path dataset_csv/ebrain_df_who.csv --splits_dir splits/ebrain_who_2021_100; done
+#!/bin/bash
+#$ -S /bin/bash
+nvidia-smi
+source activate idh_classifier
 
-for j in 2.5x 5x 10x 20x; do  python eval_miccai.py --k 10 --models_exp_code tcga_2021_idh_"$j"_s1 --save_exp_code tcga_2021_idh_"$j"_test --task tcga_2_class --model_type clam_sb --results_dir results --data_root_dir /home/shubham/ssl/CLAM_lunit/ --split test --features_dir features_ebrains/features_"$j"_256 --csv_path dataset_csv/ebrain_df_label_idh.csv --splits_dir splits/ebrain_who_2021_100; done
+# Positional Arguments
+MAG=$1               # e.g., 20x (though mostly used for path mapping here)
+SELECTED_BACKBONE=$2 # e.g., uni
 
-for j in 2.5x 5x 10x 20x; do  python eval_miccai.py --k 10 --models_exp_code tcga_2021_histology_"$j"_s1 --save_exp_code tcga_2021_histology_"$j"_test --task tcga_3_class --model_type clam_sb --results_dir results --data_root_dir /home/shubham/ssl/CLAM_lunit/ --split test --features_dir features_ebrains/features_"$j"_256 --csv_path dataset_csv/ebrain_df_label_histology.csv --splits_dir splits/ebrain_who_2021_100; done
+# Valid Backbone List
+BACKBONES=("ctranspath" "hipt4k" "imagenet" "lunit" "retccl" "simclr" "uni")
 
+# Validation: Check if arguments are present
+if [ -z "$MAG" ] || [ -z "$SELECTED_BACKBONE" ]; then
+    echo "Usage: ./eval.sh [mag] [backbone]"
+    echo "Example: ./eval.sh 20x uni"
+    exit 1
+fi
+
+# Verify Backbone and Execute
+if [[ " ${BACKBONES[@]} " =~ " ${SELECTED_BACKBONE} " ]]; then
+    echo "-------------------------------------------------------"
+    echo "Starting Evaluation Workflow"
+    echo "Magnification:  $MAG"
+    echo "Model Backbone: $SELECTED_BACKBONE"
+    echo "Loading Models: results/idh_${SELECTED_BACKBONE}_s1"
+    echo "Features Dir:   features/$SELECTED_BACKBONE"
+    echo "-------------------------------------------------------"
+
+    # Note: main.py appends '_s1' (or whatever the seed is) to the exp_code 
+    # for the folder name. We account for that in --models_exp_code.
+    
+    python eval.py \
+        --k 10 \
+        --models_exp_code "idh_${SELECTED_BACKBONE}_s1" \
+        --save_exp_code "idh_eval_results_${SELECTED_BACKBONE}" \
+        --task task_idh_classifier \
+        --model_type clam_sb \
+        --results_dir results \
+        --split test \
+        --features_dir "features/$SELECTED_BACKBONE" \
+        --csv_path "dataset_csv/df_idh_label.csv" \
+        --splits_dir "splits/tcga_idh_100"
+else
+    echo "Error: Invalid backbone '$SELECTED_BACKBONE'."
+    echo "Please choose from: ${BACKBONES[*]}"
+    exit 1
+fi

@@ -152,11 +152,21 @@ Example:
 This codebase is heavily based on [CLAM](https://github.com/mahmoodlab/CLAM/). However, unlike CLAM, instance-level clustering is not used.
 The model is trained using a pure Attention-based Multiple Instance Learning (MIL) framework.
 
-## Evaluation 
+As we discussed in our paper, we have trained our model on three different groups of patients. To train the train model replace the **splits_dir** argument in the `main.py` file. 
 
+## Evaluation 
+To run the evaluation script, pass the **magnification level** and **backbone name** as arguments:
+```bash
+chmod +x eval.sh
+./eval.sh <MAG> <BACKBONE>
+```
+
+Example: 
+```bash
+./eval.sh 20x uni
+```
 
 ## Hovernet
-
 
 ## Acknowledgement
 
