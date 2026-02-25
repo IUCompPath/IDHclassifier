@@ -3,6 +3,8 @@
 nvidia-smi
 source activate idh_classifier
 
+
+
 # Positional Arguments
 MAG=$1               # e.g., 20x
 SELECTED_BACKBONE=$2 # e.g., uni
