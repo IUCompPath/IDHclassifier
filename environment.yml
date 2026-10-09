@@ -1,0 +1,10 @@
+name: idh_classifier
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - openslide=4.0.0     # C library
+  - pip:
+      - -r requirements.txt

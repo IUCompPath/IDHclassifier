@@ -6,165 +6,133 @@ Isocitrate dehydrogenase (IDH) mutation status is a diagnostic requirement for g
 
 
 ## Environment
-## Pre-requisites:
-* Linux (Tested on Ubuntu 22.04)
-* NVIDIA GPU (Tested on Nvidia A6000)
 
-After setting up anaconda, first install openslide:
-```bash
-sudo apt-get install openslide-tools
-```
+* Linux (tested on Ubuntu 22.04); an NVIDIA GPU is recommended for feature extraction (training on pre-extracted features also runs on CPU)
+* Python 3.10+, PyTorch 2.x
 
-Next, use the environment configuration file to create a conda environment:
 ```bash
-conda env create -n idh_classifier -f  idh_classifier.yaml
-```
-
-Activate the environment:
-```bash
+sudo apt-get install openslide-tools        # OpenSlide C library (or: conda install -c conda-forge openslide)
+git clone --recurse-submodules https://github.com/IUCompPath/IDHclassifier.git
+cd IDHclassifier
+conda env create -f environment.yml          # creates `idh_classifier`
 conda activate idh_classifier
+# install the PyTorch build that matches your CUDA, e.g.
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 ```
 
-Once inside the created environment, to install smooth-topk (first cd to a location that is outside the project folder and is suitable for cloning new git repositories):
+`pip install -r requirements.txt` works as well if you prefer a plain virtualenv.
+The old CLAM-era `idh_classifier.yaml` (Python 3.7 / PyTorch 1.3) was removed because it could not run the UNI / timm-based extractors.
+The optional `smooth-topk` package is only needed if you pass `--bag_loss svm` or `--inst_loss svm`; the default configuration does not use it.
+
+## Pipeline overview
+
+```
+slides -> 1. segmentation + patch coordinates -> 2. patch cleaning -> 3. feature extraction -> 4. train (10-fold) -> 5. evaluate
+```
+
+All commands are run from the repository root. Intermediate data goes to `data/` and `features/`, outputs to `results/` and `eval_results/` (all git-ignored).
+
+### 1-2. WSI segmentation, patching and cleaning
+
+Put the slides in `data/slides_20x/` and/or `data/slides_40x/`:
+
+```
+data/slides_20x/patient_1_slide_a.svs
+data/slides_40x/patient_2_slide_a.svs
+```
+
 ```bash
-git clone https://github.com/oval-group/smooth-topk.git
-cd smooth-topk
-python setup.py install
+./scripts/create_patches.sh 20x     # 256 px patches
+./scripts/create_patches.sh 40x     # 512 px patches (same field of view as 256 px at 20x)
 ```
 
-## WSI Segmentation and Patching 
+Outputs per magnification (`data/slides_patches_<mag>/`): `masks/`, `patches/<slide>.h5` (coordinates), `stitches/`, `process_list_autogen.csv`.
+The second step (`step_1a_patch_cleaning.py`) rewrites the `.h5` files in place and drops patches that are mostly background (white/black pixels), lack H&E stain (HED colour deconvolution), or are blurry/low-saturation (HSV thresholds, magnification specific). Segmentation parameters come from `presets/tcga.csv`.
 
-
+### 3. Feature extraction
 
 ```bash
-data/slides_20x/
-	├── patient_1_slide_a.svs
-	├── patient_1_slide_b.svs
-	└── ...
-data/slides_40x/
-	├── patient_2_slide_a.svs
-	├── patient_2_slide_b.svs
-	└── ...
+./scripts/create_features.sh <MAG> <BACKBONE> [BATCH_SIZE]
+./scripts/create_features.sh 20x uni 128
 ```
 
-### 🛠 Workflow Logic
+This calls `extract_features.py` and writes `features/<MAG>/<BACKBONE>/pt_files/<slide>.pt` (plus `h5_files/` with coordinates). The slide list comes from `dataset_csv/all_slides_gbm_lgg_<MAG>.csv`. Patches are resized to 224 px.
 
-The pipeline automatically adjusts the extraction scale and file paths based on the input magnification. 
-This ensures that the physical area covered by a patch remains consistent or follows your specific protocol.
+| Backbone | Feature dim | Weights |
+| :--- | :--- | :--- |
+| `uni` | 1024 | [UNI](https://github.com/mahmoodlab/UNI): request access on HuggingFace and run `huggingface-cli login`; downloaded automatically to `assets/ckpts/uni/` |
+| `ctranspath` | 768 | [CTransPath](https://github.com/Xiyue-Wang/TransPath): put `ctranspath.pth` in `create_features_scripts/TransPath/` (git submodule; it needs `timm==0.5.4`, see its README) |
+| `retccl` | 2048 | [RetCCL](https://github.com/Xiyue-Wang/RetCCL): put `best_ckpt.pth` in `create_features_scripts/` |
+| `hipt4k` | 192 | [HIPT](https://github.com/mahmoodlab/HIPT): put the checkpoints in `create_features_scripts/HIPT_4K/Checkpoints/` |
+| `lunit` | 384 | [Lunit DINO ViT-S/8](https://github.com/lunit-io/benchmark-ssl-pathology): downloaded automatically |
+| `simclr` | 512 | [SimCLR ResNet-18](https://github.com/ozanciga/self-supervised-histopathology): put `tenpercent_resnet18.ckpt` in `create_features_scripts/` |
+| `imagenet` | 1024 | ImageNet ResNet-50 truncated after layer 3: downloaded automatically |
 
-| Input Argument | Target Data Directory | Output Directory | Patch Size |
-| :--- | :--- | :--- | :--- |
-| `20x` | `data/slides_20x/` | `data/slides_patches_20x/` | **256** |
-| `40x` | `data/slides_40x/` | `data/slides_patches_40x/` | **512** |
+The feature dimension is detected from the extracted features (`--embed_dim` overrides it), so every backbone trains without code changes. Please respect each model's licence and access terms.
 
+### 4. Training
 
-### Execution Examples
-```shell
-# Process 20x slides with 256px patches
-./create_patches.sh 20x
-
-# Process 40x slides with 512px patches
-./create_patches.sh 40x
-```
-By setting `20x` to `256` and `40x` to `512`, you are effectively keeping the **field of view (FOV)** of each patch identical in terms of physical microns (assuming the 40x scan has twice the resolution of the 20x scan). This is a standard best practice in pathology machine learning to ensure the model sees the same amount of tissue per tile regardless of the scanner settings.
-
-#### Output Directory Structure
 ```bash
-data/slides_patches_20x/
-	├── masks
-    		├── patient_1_slide_a.png
-    		├── patient_1_slide_b.png
-    		└── ...
-	├── patches
-    		├── patient_1_slide_a.h5
-    		├── patient_1_slide_b.h5
-    		└── ...
-	├── stitches
-    		├── patient_1_slide_a.png
-    		├── patient_1_slide_b.png
-    		└── ...
-	└── slides_processed.csv
-
-data/slides_patches_40x/
-├── masks
-        ├── patient_1_slide_a.png
-        ├── patient_1_slide_b.png
-        └── ...
-├── patches
-        ├── patient_1_slide_a.h5
-        ├── patient_1_slide_b.h5
-        └── ...
-├── stitches
-        ├── patient_1_slide_a.png
-        ├── patient_1_slide_b.png
-        └── ...
-└── slides_processed.csv
+./scripts/train.sh <MAG> <BACKBONE> [SPLITS]
+./scripts/train.sh 20x uni                 # SPLITS defaults to tcga_idh_100
 ```
 
-### 🧹 Patch Cleanup (Step 2)
-After initial patching, the pipeline runs a **Cleanup Script** to filter out low-quality tiles.
-#### Filtering Criteria:
-1. **White Space**: Patches with >85% background are removed.
-2. **Stain Detection**: Uses HED (Hematoxylin-Eosin-DAB) color deconvolution to ensure tissue is actually present.
-3. **HSV Filtering**: Removes blurry or out-of-focus areas based on saturation and value thresholds.
+The model is a pure attention-based MIL classifier (CLAM-SB architecture without instance-level clustering; see [CLAM](https://github.com/mahmoodlab/CLAM)): 10 folds, Adam, lr 1e-4, weight decay 1e-5, class-balanced sampling, early stopping on validation loss (patience 20, from epoch 50), seed 1. Results go to `results/idh_<MAG>_<BACKBONE>_s1/` (`s_<fold>_checkpoint.pt`, `split_<fold>_results.pkl`, `summary.csv`).
 
-#### Why this is necessary:
-Whole Slide Images often contain artifacts, marker ink, or large empty regions. By cleaning the `.h5` files, you reduce the noise in your training set and significantly speed up the feature extraction (encoding) step.
+Split sets in `splits/` are patient-level; no patient appears in more than one of train/val/test within a fold (checked):
 
-## Creating Features
-Run the extraction script by specifying magnification, batch size, and the desired model backbone. The script dynamically maps to the correct data and coordinate directories based on the magnification provided.
+| Folder | Description |
+| :--- | :--- |
+| `tcga_idh_100` | all 1534 TCGA GBM/LGG slides, 100% of training labels |
+| `tcga_idh_10_folds_excluded_g2_oligodendros` | 982 slides, grade-2 oligodendrogliomas excluded |
+| `tcga_idh_10_folds_excluded_g2_oligos_blank_methylated` | 820 slides, grade-2 oligodendrogliomas and blank/methylated cases excluded |
 
-### Usage
-```shell
-./extract_features.sh <MAG> <BATCH_SIZE> <BACKBONE>
-```
-Example: 
-```shell
-./extract_features.sh 20x 256 uni
-```
+Pass another set as the third argument of `train.sh` (or `--split_dir` to `main.py`).
 
-### Supported Backbones
+### 5. Evaluation
 
-We support several **state-of-the-art self-supervised and supervised models** for histopathology.  
-For more details about each model, please refer to the original repositories to request access and follow their specific licensing terms.
-
-- **UNI** : [https://github.com/mahmoodlab/UNI](https://github.com/mahmoodlab/UNI)
-- **CTransPath** : [https://github.com/Xiyue-Wang/TransPath](https://github.com/Xiyue-Wang/TransPath)
-- **RetCCL** : [https://github.com/Xiyue-Wang/RetCCL](https://github.com/Xiyue-Wang/RetCCL)
-- **HIPT-4K** : [https://github.com/mahmoodlab/HIPT](https://github.com/mahmoodlab/HIPT)
-- **Lunit ViT** : [https://github.com/lunit-io/benchmark-ssl-pathology](https://github.com/lunit-io/benchmark-ssl-pathology)
-- **SimCLR** : [https://github.com/ozanciga/self-supervised-histopathology](https://github.com/ozanciga/self-supervised-histopathology)
-- **ResNet-50** : ImageNet pretrained
-
-## Training the models
-
-### Usage Instructions
-To run the training script, pass the **magnification level** and **backbone name** as arguments:
 ```bash
-chmod +x train.sh
-./train.sh <MAG> <BACKBONE>
+./scripts/eval.sh <MAG> <BACKBONE> [SPLITS]
+./scripts/eval.sh 20x uni
 ```
 
-Example: 
+Per-fold slide predictions and `summary.csv` (AUC, accuracy) go to `eval_results/EVAL_idh_<MAG>_<BACKBONE>/`.
+
+## Reproducibility
+
+* Fixed splits are in `splits/`; labels are in `dataset_csv/df_idh_label.csv` (`label` 1 = IDH-mutant, 0 = IDH-wildtype).
+* `main.py` seeds Python, NumPy and PyTorch before every fold and enables deterministic cuDNN. Re-running the same command on the same machine gave bit-identical checkpoints in our CPU test; GPU results may still differ slightly across GPU, driver and PyTorch versions.
+* Run settings are saved to `results/<exp>/experiment_<exp>.txt` and the exact fold membership to `results/<exp>/splits_<fold>.csv`.
+* Feature extraction depends on the pretrained weights and library versions, so differences there propagate to the final metrics.
+
+### Quick smoke test (no slides or GPU needed)
+
+Checks that training and evaluation run, using random features:
+
 ```bash
-./train.sh 20x uni
+python -c "
+import os, pandas as pd, torch
+os.makedirs('features/dummy/pt_files', exist_ok=True)
+for sid, y in pd.read_csv('dataset_csv/df_idh_label.csv')[['slide_id', 'label']].values:
+    torch.save(torch.randn(20, 384) + 0.3 * y, f'features/dummy/pt_files/{sid}.pt')
+"
+python main.py --early_stopping --max_epochs 3 --k_start 0 --k_end 1 --exp_code smoke --no_inst_cluster --weighted_sample \
+    --csv_path dataset_csv/df_idh_label.csv --features_dir features/dummy --split_dir tcga_idh_100
+python eval.py --k_start 0 --k_end 1 --models_exp_code smoke_s1 --save_exp_code smoke --task task_idh_classifier \
+    --csv_path dataset_csv/df_idh_label.csv --features_dir features/dummy --splits_dir splits/tcga_idh_100
 ```
-### Methodology
-This codebase is heavily based on [CLAM](https://github.com/mahmoodlab/CLAM/). However, unlike CLAM, instance-level clustering is not used.
-The model is trained using a pure Attention-based Multiple Instance Learning (MIL) framework.
 
-As we discussed in our paper, we have trained our model on three different groups of patients. To train the train model replace the **splits_dir** argument in the `main.py` file. 
+## Repository layout
 
-## Evaluation 
-To run the evaluation script, pass the **magnification level** and **backbone name** as arguments:
-```bash
-chmod +x eval.sh
-./eval.sh <MAG> <BACKBONE>
 ```
-
-Example: 
-```bash
-./eval.sh 20x uni
+main.py, eval.py           training / evaluation (CLAM-based MIL)
+step_1_patching.py         tissue segmentation + patch coordinates
+step_1a_patch_cleaning.py  patch quality filtering
+extract_features.py        feature extraction for all backbones
+models/ datasets/ utils/   MIL models, datasets, helpers
+wsi_core/                  whole-slide image utilities (from CLAM)
+create_features_scripts/   third-party backbone code (HIPT, RetCCL, TransPath)
+dataset_csv/ splits/ presets/ scripts/
 ```
 
 ## References

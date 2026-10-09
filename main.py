@@ -23,8 +23,7 @@ import numpy as np
 
 def main(args):
     # create results directory if necessary
-    if not os.path.isdir(args.results_dir):
-        os.mkdir(args.results_dir)
+    os.makedirs(args.results_dir, exist_ok=True)
 
     if args.k_start == -1:
         start = 0
@@ -98,8 +97,9 @@ parser.add_argument('--exp_code', type=str, help='experiment code for saving res
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 parser.add_argument('--model_size', type=str, choices=['small', 'big'], default='small', help='size of model, does not affect mil')
 parser.add_argument('--task', type=str, choices=['task_idh_classifier'], help='classification task',default='task_idh_classifier')
-parser.add_argument('--features_dir', type=str, default=None, help='directory containing pre-extracted features')
-parser.add_argument('--csv_path', type=str, default=None, help='path to csv file containing slide and label information')
+parser.add_argument('--features_dir', type=str, required=True, help='directory containing pre-extracted features (with a pt_files/ subfolder)')
+parser.add_argument('--csv_path', type=str, required=True, help='path to csv file containing slide and label information')
+parser.add_argument('--embed_dim', type=int, default=None, help='feature dimension of the backbone (default: inferred from the first feature file)')
 ### CLAM specific options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering')
@@ -127,7 +127,6 @@ def seed_torch(seed=7):
 
 seed_torch(args.seed)
 
-encoding_size = 1024
 settings = {'num_splits': args.k, 
             'k_start': args.k_start,
             'k_end': args.k_end,
@@ -144,7 +143,9 @@ settings = {'num_splits': args.k,
             'model_size': args.model_size,
             "use_drop_out": args.drop_out,
             'weighted_sample': args.weighted_sample,
-            'opt': args.opt}
+            'opt': args.opt,
+            'features_dir': args.features_dir,
+            'csv_path': args.csv_path}
 
 if args.model_type in ['clam_sb', 'clam_mb']:
    settings.update({'bag_weight': args.bag_weight,
@@ -164,23 +165,22 @@ if args.task == 'task_idh_classifier':
                             patient_strat=False,
                             ignore=[])
 
-    if args.model_type in ['clam_sb', 'clam_mb']:
-        assert args.subtyping 
-        
+    if args.embed_dim is None:
+        args.embed_dim = dataset.infer_embed_dim()
+    print('embed_dim:', args.embed_dim)
+
 else:
     raise NotImplementedError
     
-if not os.path.isdir(args.results_dir):
-    os.mkdir(args.results_dir)
-
 args.results_dir = os.path.join(args.results_dir, str(args.exp_code) + '_s{}'.format(args.seed))
-if not os.path.isdir(args.results_dir):
-    os.mkdir(args.results_dir)
+os.makedirs(args.results_dir, exist_ok=True)
 
 if args.split_dir is None:
     args.split_dir = os.path.join('splits', args.task+'_{}'.format(int(args.label_frac*100)))
 else:
-    args.split_dir = os.path.join('splits', args.split_dir)
+    # accept either a name under splits/ or a path to a splits folder
+    if not os.path.isdir(args.split_dir):
+        args.split_dir = os.path.join('splits', args.split_dir)
 
 print('split_dir: ', args.split_dir)
 assert os.path.isdir(args.split_dir)
@@ -190,7 +190,6 @@ settings.update({'split_dir': args.split_dir})
 
 with open(args.results_dir + '/experiment_{}.txt'.format(args.exp_code), 'w') as f:
     print(settings, file=f)
-f.close()
 
 print("################# Settings ###################")
 for key, val in settings.items():

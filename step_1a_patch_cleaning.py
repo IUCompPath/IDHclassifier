@@ -6,7 +6,7 @@ import pandas as pd
 import openslide
 import cv2
 from tqdm import tqdm
-from glob import glob
+from functools import partial
 from multiprocessing import Pool, cpu_count
 from skimage.color import rgb2hed
 from skimage.exposure import rescale_intensity
@@ -77,11 +77,13 @@ def filter_patch(patch_array, patch_mag, intensity_thresh=225, intensity_thresh_
     return True
 
 def process_slide_cleanup(slide_id, args):
-    slide_name = os.path.splitext(slide_id)[0]
-    # Locate H5 file
-    h5_files = glob(os.path.join(args.h5_dir, f"{slide_name}*"))
-    if not h5_files: return f"Skip: {slide_name} (H5 not found)"
-    h5_path = h5_files[0]
+    # TCGA slide ids contain dots, so only strip a known slide extension
+    slide_name = slide_id
+    for ext in ['.svs', '.ndpi', '.tif']:
+        if slide_id.endswith(ext):
+            slide_name = slide_id[:-len(ext)]
+    h5_path = os.path.join(args.h5_dir, slide_name + '.h5')
+    if not os.path.exists(h5_path): return f"Skip: {slide_name} (H5 not found)"
     
     # Locate WSI file (check multiple common extensions)
     wsi_path = None
@@ -102,6 +104,8 @@ def process_slide_cleanup(slide_id, args):
         patch_level = attrs['patch_level']
         
         # Determine valid coordinates
+        if len(coords) == 0:
+            return f"Skip: {slide_name} (no patches)"
         mask = []
         for coord in coords:
             patch = np.array(slide.read_region(coord, patch_level, (patch_size, patch_size)).convert("RGB"))
@@ -125,7 +129,7 @@ if __name__ == "__main__":
     parser.add_argument('--csv_path', type=str, required=True)
     parser.add_argument('--patching', type=str, required=True, 
                         choices=['2.5x', '5x', '10x', '20x', '40x'])
-    parser.add_argument('--num_workers', type=int, default=cpu_count()-2)
+    parser.add_argument('--num_workers', type=int, default=max(1, cpu_count() - 2))
     args = parser.parse_args()
 
     df = pd.read_csv(args.csv_path)
@@ -133,7 +137,7 @@ if __name__ == "__main__":
 
     with Pool(args.num_workers) as pool:
         results = list(tqdm(pool.imap_unordered(
-            lambda s: process_slide_cleanup(s, args), slides), total=len(slides)))
+            partial(process_slide_cleanup, args=args), slides), total=len(slides)))
     
     # Write summary to file
     with open("cleanup_log.txt", "w") as f:

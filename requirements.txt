@@ -1,0 +1,18 @@
+# Install a PyTorch build matching your CUDA first (https://pytorch.org/get-started/locally/), e.g.
+#   pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu121
+torch>=2.0
+torchvision>=0.15
+numpy>=1.23
+pandas>=1.5
+scipy>=1.9
+scikit-learn>=1.1
+scikit-image>=0.19
+h5py>=3.8
+openslide-python>=1.2
+opencv-python-headless>=4.7
+Pillow>=9.4
+matplotlib>=3.6
+tqdm
+tensorboardX>=2.6
+timm>=0.9        # UNI, Lunit, CTransPath (TransPath ships its own patched timm 0.5.4, see README)
+huggingface_hub>=0.20

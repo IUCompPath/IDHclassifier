@@ -8,3 +8,12 @@ create_features_scripts/HIPT_4K/Checkpoints/*
 create_features_scripts/tenpercent_resnet18.ckpt
 create_features_scripts/best_ckpt.pth
 .vscode/
+# data & outputs
+data/
+features/
+results/
+eval_results/
+assets/
+cleanup_log.txt
+*.pyc
+.ipynb_checkpoints/

@@ -10,7 +10,6 @@ import os
 import pandas as pd
 from utils.utils import *
 from math import floor
-import matplotlib.pyplot as plt
 from datasets.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
 import h5py
 from utils.eval_utils import *
@@ -44,13 +43,15 @@ parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all']
 parser.add_argument('--task', type=str, choices=['task_idh_classifier'])
 parser.add_argument('--features_dir', type=str, default=None, 
                     help='directory containing pre-extracted features')
-parser.add_argument('--csv_path', type=str, default=None, 
+parser.add_argument('--csv_path', type=str, required=True, 
                     help='path to csv file containing slide and label information') 
+parser.add_argument('--embed_dim', type=int, default=None, help='feature dimension of the backbone (default: inferred from the first feature file)')
+parser.add_argument('--eval_dir', type=str, default='./eval_results', help='where evaluation outputs are written')
 args = parser.parse_args()
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code))
+args.save_dir = os.path.join(args.eval_dir, 'EVAL_' + str(args.save_exp_code))
 args.models_dir = os.path.join(args.results_dir, str(args.models_exp_code))
 
 os.makedirs(args.save_dir, exist_ok=True)
@@ -71,7 +72,6 @@ settings = {'task': args.task,
 
 with open(args.save_dir + '/eval_experiment_{}.txt'.format(args.save_exp_code), 'w') as f:
     print(settings, file=f)
-f.close()
 
 print(settings)
 if args.task == 'task_idh_classifier':
@@ -83,6 +83,8 @@ if args.task == 'task_idh_classifier':
                             label_dict = {0:0, 1:1},
                             patient_strat=False,
                             ignore=[])
+    if args.embed_dim is None:
+        args.embed_dim = dataset.infer_embed_dim()
 else:
     raise NotImplementedError
 
@@ -114,12 +116,12 @@ if __name__ == "__main__":
             datasets = dataset.return_splits(from_id=False, csv_path=csv_path)
             split_dataset = datasets[datasets_id[args.split]]
         model, patient_results, test_error, auc, df  = eval(split_dataset, args, ckpt_paths[ckpt_idx])
-        all_results.append(all_results)
+        all_results.append(patient_results)
         all_auc.append(auc)
         all_acc.append(1-test_error)
         df.to_csv(os.path.join(args.save_dir, 'fold_{}.csv'.format(folds[ckpt_idx])), index=False)
 
-    final_df = pd.DataFrame({'folds': folds, 'test_auc': all_auc, 'test_acc': all_acc})
+    final_df = pd.DataFrame({'folds': list(folds), 'test_auc': all_auc, 'test_acc': all_acc})
     if len(folds) != args.k:
         save_name = 'summary_partial_{}_{}.csv'.format(folds[0], folds[-1])
     else:

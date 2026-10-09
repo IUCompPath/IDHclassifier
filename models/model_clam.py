@@ -76,10 +76,11 @@ args:
 """
 class CLAM_SB(nn.Module):
     def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
-        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024):
         super(CLAM_SB, self).__init__()
         self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
-        size = self.size_dict[size_arg]
+        size = list(self.size_dict[size_arg])
+        size[0] = embed_dim  # input feature dimension of the chosen backbone
         fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
         if dropout:
             fc.append(nn.Dropout(0.25))
@@ -192,10 +193,11 @@ class CLAM_SB(nn.Module):
 
 class CLAM_MB(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = False, k_sample=8, n_classes=2,
-        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
+        instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False, embed_dim=1024):
         nn.Module.__init__(self)
         self.size_dict = {"small": [1024, 512, 256], "big": [1024, 512, 384]}
-        size = self.size_dict[size_arg]
+        size = list(self.size_dict[size_arg])
+        size[0] = embed_dim  # input feature dimension of the chosen backbone
         fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
         if dropout:
             fc.append(nn.Dropout(0.25))

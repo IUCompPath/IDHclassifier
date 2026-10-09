@@ -322,6 +322,12 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 		self.data_dir = data_dir
 		self.use_h5 = False
 
+	def infer_embed_dim(self):
+		"""Feature dimension of the pre-extracted bags (read from the first slide)."""
+		slide_id = self.slide_data['slide_id'][0]
+		features = torch.load(os.path.join(self.data_dir, 'pt_files', '{}.pt'.format(slide_id)), map_location='cpu')
+		return int(features.shape[-1])
+
 	def load_from_h5(self, toggle):
 		self.use_h5 = toggle
 
@@ -337,7 +343,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 		if not self.use_h5:
 			if self.data_dir:
 				full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
-				features = torch.load(full_path)
+				features = torch.load(full_path, map_location='cpu')
 				return features, label
 			
 			else:
