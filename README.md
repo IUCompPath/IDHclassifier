@@ -105,21 +105,24 @@ Per-fold slide predictions and `summary.csv` (AUC, accuracy) go to `eval_results
 * Run settings are saved to `results/<exp>/experiment_<exp>.txt` and the exact fold membership to `results/<exp>/splits_<fold>.csv`.
 * Feature extraction depends on the pretrained weights and library versions, so differences there propagate to the final metrics.
 
-### Quick smoke test (no slides or GPU needed)
+### Smoke test (no slides or GPU needed)
 
-Checks that training and evaluation run, using random features:
+`smoke_test/` ships 24 real TCGA slides (12 IDH-mutant / 12 wildtype, one per patient) with 24 randomly sampled patch features each (about 5 MB), patient-disjoint 3-fold splits, and a script that runs the whole downstream pipeline:
 
 ```bash
-python -c "
-import os, pandas as pd, torch
-os.makedirs('features/dummy/pt_files', exist_ok=True)
-for sid, y in pd.read_csv('dataset_csv/df_idh_label.csv')[['slide_id', 'label']].values:
-    torch.save(torch.randn(20, 384) + 0.3 * y, f'features/dummy/pt_files/{sid}.pt')
-"
-python main.py --early_stopping --max_epochs 3 --k_start 0 --k_end 1 --exp_code smoke --no_inst_cluster --weighted_sample \
-    --csv_path dataset_csv/df_idh_label.csv --features_dir features/dummy --split_dir tcga_idh_100
-python eval.py --k_start 0 --k_end 1 --models_exp_code smoke_s1 --save_exp_code smoke --task task_idh_classifier \
-    --csv_path dataset_csv/df_idh_label.csv --features_dir features/dummy --splits_dir splits/tcga_idh_100
+./smoke_test/run_smoke_test.sh
+```
+
+1. single-scale: train + evaluate on UNI 20x features
+2. multi-scale: train + evaluate on ImageNet 5x, 10x and 20x features, then fuse the three scales with `ensemble.py`
+
+It takes a few minutes on CPU and writes to `smoke_test/out/` (git-ignored). The numbers are only a sanity check of the code path, not results (24 slides, 4 test slides per class per fold). UNI is used at 20x only because that is the only scale of UNI features available; the multi-scale part therefore uses the ImageNet backbone. `smoke_test/make_smoke_data.py` documents how the data was sampled.
+
+`ensemble.py` averages slide-level probabilities from several `eval.py` outputs (late fusion) and reports AUC/accuracy per fold for each scale and for the ensemble:
+
+```bash
+python ensemble.py --eval_dirs eval_results/EVAL_idh_5x_uni eval_results/EVAL_idh_10x_uni eval_results/EVAL_idh_20x_uni \
+    --names 5x 10x 20x --out_dir eval_results/ENSEMBLE_idh_uni
 ```
 
 ## Repository layout
@@ -129,6 +132,8 @@ main.py, eval.py           training / evaluation (CLAM-based MIL)
 step_1_patching.py         tissue segmentation + patch coordinates
 step_1a_patch_cleaning.py  patch quality filtering
 extract_features.py        feature extraction for all backbones
+ensemble.py                multi-scale late-fusion ensemble of eval.py outputs
+smoke_test/                tiny dataset + script for an end-to-end sanity run
 models/ datasets/ utils/   MIL models, datasets, helpers
 wsi_core/                  whole-slide image utilities (from CLAM)
 create_features_scripts/   third-party backbone code (HIPT, RetCCL, TransPath)

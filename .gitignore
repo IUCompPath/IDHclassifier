@@ -9,11 +9,12 @@ create_features_scripts/tenpercent_resnet18.ckpt
 create_features_scripts/best_ckpt.pth
 .vscode/
 # data & outputs
-data/
-features/
-results/
-eval_results/
-assets/
+/data/
+/features/
+/results/
+/eval_results/
+/assets/
 cleanup_log.txt
 *.pyc
 .ipynb_checkpoints/
+smoke_test/out/
