@@ -3,9 +3,7 @@
 Picks N_PER_CLASS slides per class (one slide per patient, fixed seed), keeps N_PATCHES random patches
 of every bag (stored as float16), and writes labels + 3-fold patient-disjoint splits.
 
-    python smoke_test/make_smoke_data.py \
-        --uni_dir  /path/features_uni/tcga_gbm_lgg_20x \
-        --imagenet_fmt '/path/features_all/imagenet_gbm_lgg_{mag}'
+    python smoke_test/make_smoke_data.py --uni_dir /path/features_uni/tcga_gbm_lgg_20x
 """
 import argparse
 import os
@@ -21,13 +19,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--uni_dir', required=True, help='folder containing pt_files/ (UNI, 20x)')
-    ap.add_argument('--imagenet_fmt', required=True, help="folder pattern with '{mag}', e.g. .../imagenet_gbm_lgg_{mag}")
-    ap.add_argument('--mags', nargs='+', default=['5x', '10x', '20x'])
     args = ap.parse_args()
 
     labels = pd.read_csv(os.path.join(HERE, '..', 'dataset_csv', 'df_idh_label.csv'))
-    sources = {'uni_20x': args.uni_dir, **{f'imagenet_{m}': args.imagenet_fmt.format(mag=m) for m in args.mags}}
-    have = set.intersection(*[{f[:-3] for f in os.listdir(os.path.join(d, 'pt_files'))} for d in sources.values()])
+    sources = {'uni_20x': args.uni_dir}
+    have = {f[:-3] for f in os.listdir(os.path.join(args.uni_dir, 'pt_files'))}
     labels = labels[labels.slide_id.isin(have)].drop_duplicates('case_id')  # one slide per patient
 
     rng = np.random.RandomState(SEED)

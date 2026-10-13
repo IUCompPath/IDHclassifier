@@ -24,6 +24,12 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 The old CLAM-era `idh_classifier.yaml` (Python 3.7 / PyTorch 1.3) was removed because it could not run the UNI / timm-based extractors.
 The optional `smooth-topk` package is only needed if you pass `--bag_loss svm` or `--inst_loss svm`; the default configuration does not use it.
 
+## Data
+
+The study uses 2442 H&E whole-slide images from three retrospective glioma collections, reclassified according to WHO 2021: TCGA-GBM/LGG (1534 WSIs, 799 patients; method development, 10-fold cross-validation), and two independent hold-out cohorts, UPHS (114 WSIs/patients) and EBRAINS (794 WSIs/patients). Only the TCGA slides are public; this repository ships the TCGA labels (`dataset_csv/df_idh_label.csv`) and splits.
+
+Label coding differs between the label files: `df_idh_label.csv` (TCGA) uses **1 = IDH-mutant, 0 = IDH-wildtype**, whereas `dataset_csv/ebrain_df_label_idh.csv` uses 0 = IDH-mutant, 1 = IDH-wildtype. Re-map one of them before evaluating a TCGA-trained model on EBRAINS.
+
 ## Pipeline overview
 
 ```
@@ -107,23 +113,13 @@ Per-fold slide predictions and `summary.csv` (AUC, accuracy) go to `eval_results
 
 ### Smoke test (no slides or GPU needed)
 
-`smoke_test/` ships 24 real TCGA slides (12 IDH-mutant / 12 wildtype, one per patient) with 24 randomly sampled patch features each (about 5 MB), patient-disjoint 3-fold splits, and a script that runs the whole downstream pipeline:
+`smoke_test/` ships 24 real TCGA slides (12 IDH-mutant / 12 wildtype, one per patient) as UNI 20x features with 24 randomly sampled patches each (about 1-2 MB), patient-disjoint 3-fold splits, and a script that trains and evaluates on them:
 
 ```bash
 ./smoke_test/run_smoke_test.sh
 ```
 
-1. single-scale: train + evaluate on UNI 20x features
-2. multi-scale: train + evaluate on ImageNet 5x, 10x and 20x features, then fuse the three scales with `ensemble.py`
-
-It takes a few minutes on CPU and writes to `smoke_test/out/` (git-ignored). The numbers are only a sanity check of the code path, not results (24 slides, 4 test slides per class per fold). UNI is used at 20x only because that is the only scale of UNI features available; the multi-scale part therefore uses the ImageNet backbone. `smoke_test/make_smoke_data.py` documents how the data was sampled.
-
-`ensemble.py` averages slide-level probabilities from several `eval.py` outputs (late fusion) and reports AUC/accuracy per fold for each scale and for the ensemble:
-
-```bash
-python ensemble.py --eval_dirs eval_results/EVAL_idh_5x_uni eval_results/EVAL_idh_10x_uni eval_results/EVAL_idh_20x_uni \
-    --names 5x 10x 20x --out_dir eval_results/ENSEMBLE_idh_uni
-```
+It takes about a minute on CPU and writes to `smoke_test/out/` (git-ignored). It only checks that the training and evaluation code runs; the metrics are meaningless on 24 slides. `smoke_test/make_smoke_data.py` documents how the data was sampled.
 
 ## Repository layout
 
@@ -132,8 +128,7 @@ main.py, eval.py           training / evaluation (CLAM-based MIL)
 step_1_patching.py         tissue segmentation + patch coordinates
 step_1a_patch_cleaning.py  patch quality filtering
 extract_features.py        feature extraction for all backbones
-ensemble.py                multi-scale late-fusion ensemble of eval.py outputs
-smoke_test/                tiny dataset + script for an end-to-end sanity run
+smoke_test/                tiny dataset + script for a train/eval sanity run
 models/ datasets/ utils/   MIL models, datasets, helpers
 wsi_core/                  whole-slide image utilities (from CLAM)
 create_features_scripts/   third-party backbone code (HIPT, RetCCL, TransPath)
