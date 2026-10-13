@@ -26,9 +26,9 @@ The optional `smooth-topk` package is only needed if you pass `--bag_loss svm` o
 
 ## Data
 
-The study uses 2442 H&E whole-slide images from three retrospective glioma collections, reclassified according to WHO 2021: TCGA-GBM/LGG (1534 WSIs, 799 patients; method development, 10-fold cross-validation), and two independent hold-out cohorts, UPHS (114 WSIs/patients) and EBRAINS (794 WSIs/patients). Only the TCGA slides are public; this repository ships the TCGA labels (`dataset_csv/df_idh_label.csv`) and splits.
+The study uses 2442 H&E whole-slide images from three retrospective glioma collections, reclassified according to WHO 2021: TCGA-GBM/LGG (1534 WSIs, 799 patients; method development, 10-fold cross-validation), and two independent hold-out cohorts, UPHS (114 WSIs/patients) and EBRAINS (794 WSIs/patients). TCGA (via TCIA) and EBRAINS (Digital Brain Tumor Atlas) are public; UPHS is a private collection. This repository ships the TCGA labels (`dataset_csv/df_idh_label.csv`), the EBRAINS labels (`dataset_csv/ebrain_df_label_idh.csv`) and the TCGA cross-validation splits.
 
-Label coding differs between the label files: `df_idh_label.csv` (TCGA) uses **1 = IDH-mutant, 0 = IDH-wildtype**, whereas `dataset_csv/ebrain_df_label_idh.csv` uses 0 = IDH-mutant, 1 = IDH-wildtype. Re-map one of them before evaluating a TCGA-trained model on EBRAINS.
+All label files use the same coding: **1 = IDH-mutant, 0 = IDH-wildtype**.
 
 ## Pipeline overview
 
@@ -103,6 +103,19 @@ Pass another set as the third argument of `train.sh` (or `--split_dir` to `main.
 ```
 
 Per-fold slide predictions and `summary.csv` (AUC, accuracy) go to `eval_results/EVAL_idh_<MAG>_<BACKBONE>/`.
+
+### 6. External validation (EBRAINS)
+
+As in the paper, models are developed on TCGA only; the 10 fold models trained in step 4 are applied unchanged to the independent hold-out cohort (every slide is a test slide) and the per-fold AUC/accuracy are summarised in `summary.csv`.
+
+```bash
+# extract features of the hold-out slides with the same backbone / magnification (example for EBRAINS, 20x)
+python extract_features.py --model uni --data_h5_dir data/ebrains_patches_20x --data_slide_dir data/ebrains_20x \
+    --csv_path dataset_csv/ebrain_df_label_idh.csv --feat_dir features/ebrains/20x/uni --slide_ext .svs
+./scripts/eval_external.sh 20x uni ebrains
+```
+
+Outputs: `eval_results/EVAL_idh_20x_uni_ebrains/` (`fold_<k>.csv`, `summary.csv`). Run steps 1-2 on the EBRAINS slides first (the extraction call above expects the patch coordinates in `data/ebrains_patches_20x/patches/`).
 
 ## Reproducibility
 
